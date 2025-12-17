@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel</title>
+
+<style>
+:root{
+  --primary:#5865F2;
+  --success:#2ecc71;
+  --danger:#e74c3c;
+  --card:#fff;
+  --muted:#6c757d;
+}
+
+*{box-sizing:border-box}
+
+body{
+  font-family:'Segoe UI',Arial;
+  background:linear-gradient(135deg,#eef2ff,#f8fbff);
+  margin:0;
+  padding:20px;
+}
+
+/* MENU */
+.admin-menu{
+  position:fixed;
+  top:20px;
+  right:20px;
+  z-index:999;
+}
+
+.hamburger{
+  width:42px;height:42px;
+  border-radius:12px;
+  background:#fff;
+  box-shadow:0 6px 18px rgba(0,0,0,.12);
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  cursor:pointer;
+}
+
+.hamburger span{
+  width:22px;height:3px;
+  background:#333;
+  margin:2px 0;
+}
+
+.dropdown{
+  display:none;
+  position:absolute;
+  top:52px;right:0;
+  background:#fff;
+  border-radius:14px;
+  box-shadow:0 10px 25px rgba(0,0,0,.12);
+}
+
+.dropdown a{
+  display:block;
+  padding:12px 18px;
+  text-decoration:none;
+  color:#333;
+  font-weight:600;
+}
+
+/* LAYOUT */
+.wrapper{
+  max-width:1100px;
+  margin:auto;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:20px;
+}
+
+.card{
+  background:#fff;
+  border-radius:16px;
+  padding:20px;
+  box-shadow:0 12px 30px rgba(0,0,0,.08);
+}
+
+input,textarea,button{
+  width:100%;
+  padding:12px;
+  border-radius:10px;
+  border:1px solid #ddd;
+  margin-bottom:12px;
+}
+
+button{
+  background:var(--primary);
+  color:#fff;
+  border:none;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+/* PREVIEW */
+.img-wrap{
+  height:180px;
+  background:#f1f3f5;
+  border-radius:12px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+
+.img-wrap img{
+  width:100%;height:100%;object-fit:cover;
+}
+
+.price{color:var(--success);font-weight:bold}
+
+/* LIST ADMIN */
+.list{
+  margin-top:20px;
+}
+
+.item{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:12px;
+  border-radius:12px;
+  background:#f8f9fb;
+  margin-bottom:10px;
+}
+
+.item small{color:var(--muted)}
+
+.actions button{
+  padding:6px 12px;
+  border-radius:8px;
+  font-size:12px;
+}
+
+.del{background:var(--danger)}
+
+@media(max-width:800px){
+  .wrapper{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<script>
+if(localStorage.getItem("adminLogin")!=="true"){
+  location.href="login.html";
+}
+</script>
+
+<!-- MENU -->
+<div class="admin-menu">
+  <div class="hamburger" onclick="toggleMenu()">
+    <span></span><span></span><span></span>
+  </div>
+  <div class="dropdown" id="menu">
+    <a href="index.html">Home</a>
+  </div>
+</div>
+
+<div class="wrapper">
+
+<!-- FORM -->
+<div class="card">
+<h2>Tambah Produk</h2>
+
+<input id="nama" placeholder="Nama Produk" oninput="updatePreview()">
+<input id="harga" placeholder="Harga" oninput="updatePreview()">
+<input type="file" id="gambarFile" accept="image/*">
+<textarea id="fitur" rows="5" placeholder="1 baris = 1 fitur" oninput="updatePreview()"></textarea>
+
+<button onclick="simpanProduk()">Simpan Produk</button>
+</div>
+
+<!-- PREVIEW + LIST -->
+<div class="card">
+<h2>Preview</h2>
+
+<div class="img-wrap">
+<img id="previewImg" style="display:none">
+<span id="noImg">Preview Gambar</span>
+</div>
+
+<h3 id="previewNama">Nama Produk</h3>
+<div class="price" id="previewHarga">Rp 0</div>
+<ul id="previewFitur"><li>Fitur tampil di sini</li></ul>
+
+<hr style="margin:20px 0">
+
+<h3>Daftar Produk</h3>
+<div class="list" id="listProduk"></div>
+</div>
+
+</div>
+
+<script>
+let gambarBase64="";
+
+function toggleMenu(){
+  menu.style.display=menu.style.display==="block"?"none":"block";
+}
+
+gambarFile.addEventListener("change",()=>{
+  const f=gambarFile.files[0];
+  if(!f)return;
+  const r=new FileReader();
+  r.onload=e=>{
+    gambarBase64=e.target.result;
+    previewImg.src=gambarBase64;
+    previewImg.style.display="block";
+    noImg.style.display="none";
+  };
+  r.readAsDataURL(f);
+});
+
+function updatePreview(){
+  previewNama.textContent=nama.value||"Nama Produk";
+  previewHarga.textContent="Rp "+(harga.value||0);
+  const arr=fitur.value.split("\n").filter(Boolean);
+  previewFitur.innerHTML=arr.length
+    ? arr.map(f=>`<li>${f}</li>`).join("")
+    : "<li>Fitur tampil di sini</li>";
+}
+
+function simpanProduk(){
+  if(!nama.value||!harga.value||!gambarBase64){
+    alert("Lengkapi data");
+    return;
+  }
+
+  let p=JSON.parse(localStorage.getItem("produk")||"[]");
+
+  p.push({
+    id:Date.now(),
+    nama:nama.value,
+    harga:harga.value,
+    gambar:gambarBase64,
+    fitur:fitur.value.split("\n").filter(Boolean)
+  });
+
+  localStorage.setItem("produk",JSON.stringify(p));
+
+  nama.value=harga.value=fitur.value="";
+  gambarFile.value="";
+  gambarBase64="";
+  previewImg.style.display="none";
+  noImg.style.display="block";
+  updatePreview();
+
+  renderList();
+}
+
+function renderList(){
+  let p=JSON.parse(localStorage.getItem("produk")||"[]");
+
+  if(!p.length){
+    listProduk.innerHTML="<p>Belum ada produk.</p>";
+    return;
+  }
+
+  listProduk.innerHTML=p.map(x=>`
+    <div class="item">
+      <div>
+        <b>${x.nama}</b><br>
+        <small>Rp ${x.harga}</small>
+      </div>
+      <div class="actions">
+        <button class="del" onclick="hapus(${x.id})">Hapus</button>
+      </div>
+    </div>
+  `).join("");
+}
+
+function hapus(id){
+  if(!confirm("Hapus produk ini?")) return;
+  let p=JSON.parse(localStorage.getItem("produk"));
+  p=p.filter(x=>x.id!==id);
+  localStorage.setItem("produk",JSON.stringify(p));
+  renderList();
+}
+
+renderList();
+</script>
+
+</body>
+</html>
